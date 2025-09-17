@@ -2,16 +2,23 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+def currentDatestamp = new Date().format("yyMMdd")
+def currentTimestamp = new Date().format("HHmm")
+
 android {
     namespace = "com.gncbrown.getmetosleep" // From your Java package
     compileSdk = 34 // A recent stable SDK version
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
         applicationId = "com.gncbrown.getmetosleep"
         minSdk = 23 // A common minimum SDK
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName "1.1-${currentDatestamp}${currentTimestamp}"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,9 +38,6 @@ android {
 dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
-    // You can add other dependencies from your libs.versions.toml here as needed
-    // implementation(libs.gson)
-    // implementation(libs.play.services.nearby) 
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

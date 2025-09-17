@@ -1,22 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
+    android:fitsSystemWindows="true"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    app:theme="@style/Theme.GetMeToSleep">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:title="@string/app_name"
+        app:titleTextColor="?attr/colorOnPrimary" />
 
     <TextView
         android:id="@+id/timeDisplay"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:padding="8dp"
         android:text="Quiet Time Start: 23:00"
-        android:textSize="18sp"
-        android:padding="8dp"/>
+        android:textSize="18sp" />
 
-    <Button
-        android:id="@+id/setTimeButton"
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/setTimeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set Quiet Time" />
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Charge Detection"
+                android:textSize="18sp" />
+
+            <RadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="6dp">
+
+                <RadioButton
+                    android:id="@+id/radioButtonUseScheduler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="2dp"
+                    android:minHeight="0dp"
+                    android:text="Use scheduler" />
+
+                <RadioButton
+                    android:id="@+id/radioButtonUseReceiver"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="0dp"
+                    android:text="Use power receiver with quiet time" />
+
+                <RadioButton
+                    android:id="@+id/radioButtonUseReceiverOnly"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="0dp"
+                    android:text="Use power receiver only" />
+            </RadioGroup>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Set Quiet Time"/>
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/buttonSaveVolumes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save Volumes" />
+
+        <Button
+            android:id="@+id/buttonShowSavedVolumes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:layout_weight="1"
+            android:text="Show Saved Volumes" />
+    </LinearLayout>
 </LinearLayout>

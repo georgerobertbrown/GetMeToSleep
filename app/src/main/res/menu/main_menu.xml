@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_about"
+        android:title="About"
+        android:orderInCategory="100"
+        android:icon="@android:drawable/ic_menu_info_details"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_receivers"
+        android:title="Receivers"
+        android:orderInCategory="101"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_cancel_scheduler"
+        android:title="Cancel scheduler"
+        android:orderInCategory="102"
+        android:icon="@android:drawable/ic_menu_my_calendar"
+        app:showAsAction="ifRoom" />
+
+</menu>
