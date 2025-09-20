@@ -48,27 +48,11 @@ public class ChargingReceiver extends BroadcastReceiver {
         StringBuilder message = new StringBuilder("Monitoring mode: "
                 + Utils.getMonitoringModeString(context)
                 + " Quiet Time Start: " + quietHour + ":" + quietMinute
-                + ", current time is " + hour + ":" + minute);
+                + ", current time is " + hour + ":" + minute + ". ");
         if ((monitoringMode == Utils.MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME &&
                 (hour > quietHour || (hour == quietHour && minute >= quietMinute)))
                 || monitoringMode == Utils.MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE) {
-            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-            if (audioManager == null) return;
-
-            // Save current volumes
-            String savedVolumes = Utils.saveVolumes(context);
-            message.append(". ").append(savedVolumes);
-            try {
-                // Set to vibrate and zero volumes
-                audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, 0);
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, 0, 0);
-
-                audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
-            } catch (Exception e) {
-                message.append(", error setting ringer to vibrate; " + e.getMessage());
-            }
-            message.append(", volume muted");
+            message.append(Utils.muteVolumes(context));
         } else {
             Log.d(TAG, "handlePowerConnected: not quiet time");
             message.append(", not quiet time");
@@ -79,27 +63,8 @@ public class ChargingReceiver extends BroadcastReceiver {
     private void handlePowerDisconnected(Context context) {
         Utils.setPowerConnected(context, false);
 
-        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        if (audioManager == null) return;
         Log.d(TAG, "handlePowerDisconnected");
-        StringBuilder message = new StringBuilder("Power Disconnected. ");
-        // Restore saved volumes
-        int[] savedVolumes = Utils.getSavedVolumes(context);
-        int ringer = savedVolumes[0];
-        int media = savedVolumes[1];
-        int alarm = savedVolumes[2];
-        Log.d(TAG, "handlePowerDisconnected: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
-
-        try {
-            audioManager.setStreamVolume(AudioManager.STREAM_RING, ringer, 0);
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, media, 0);
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarm, 0);
-
-            audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-            message.append("Restored ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
-        } catch (Exception e) {
-            message.append(", error restoring volume; " + e.getMessage());
-        }
+        StringBuilder message = new StringBuilder(Utils.restoreVolumes(context));
         Utils.showNotification(context, "Power Disconnected Alerts", message.toString());
     }
 

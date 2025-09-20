@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.gncbrown.getmetosleep.Receivers.NightlyPowerCheckReceiver;
 import com.gncbrown.getmetosleep.Utilities.Utils;

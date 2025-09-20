@@ -1,5 +1,6 @@
 package com.gncbrown.getmetosleep.Utilities;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.ScrollView;
@@ -15,6 +16,9 @@ import androidx.core.view.WindowInsetsCompat;
 import com.gncbrown.getmetosleep.R;
 
 public class DisplayTextActivity extends AppCompatActivity {
+    private static final String TAG = "DisplayTextActivity";
+
+    private Context context;
 
     public static final String EXTRA_TEXT_CONTENT = "extra_text_content";
     public static final String EXTRA_TEXT_TITLE = "extra_text_title";
@@ -25,6 +29,9 @@ public class DisplayTextActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        context = this;
+        String appName = getString(R.string.app_name);
 
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_show_text);
@@ -46,11 +53,11 @@ public class DisplayTextActivity extends AppCompatActivity {
         if (getIntent() != null && getIntent().hasExtra(EXTRA_TEXT_TITLE)) {
             String title = getIntent().getStringExtra(EXTRA_TEXT_TITLE);
             if (getSupportActionBar() != null) { // Check again in case title was set before action bar
-                getSupportActionBar().setTitle(title);
+                getSupportActionBar().setTitle(appName + ":" + title);
             }
         } else {
             if (getSupportActionBar() != null) {
-                getSupportActionBar().setTitle("Details"); // Default title
+                getSupportActionBar().setTitle(appName + ":" + "Details"); // Default title
             }
         }
         // toolbar.setSubtitleTextColor(android.graphics.Color.WHITE); // This line might not be needed if using theme attributes

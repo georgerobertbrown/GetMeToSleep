@@ -30,7 +30,7 @@ import java.util.List;
 
 public class Utils {
     private static final String TAG = "Utils";
-    private static final String NOTIFICATION_CHANNEL_ID = "volume_muted_channel";
+    public static final String NOTIFICATION_CHANNEL_ID = "manage_volume_channel";
     private static final int NOTIFICATION_ID = 101; // Unique ID for this notification
     private static final int REQUEST_CODE_DISPLAY_TEXT_PENDING_INTENT = 1; // Unique request code
 
@@ -50,6 +50,8 @@ public class Utils {
     public static final int MONITORING_MODE_SCHEDULER = 0;                        // Nightly scheduler, respects quiet time
     public static final int MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME = 1; // Power receiver, respects quiet time
     public static final int MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE = 2;  // Power receiver, immediate, ignores quiet time
+    public static final int MONITORING_MODE_WORKER = 3;  // Power worker
+    public static final int MONITORING_MODE_BROADCAST_RECEIVER = 4;  // Power worker
 
 
     public static void showDialog(Context context, String title, String message, int iconId) {
@@ -228,7 +230,8 @@ public class Utils {
     public static int getMonitoringMode(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         // Default to MONITORING_MODE_SCHEDULER if no preference is set
-        return prefs.getInt(KEY_MONITORING_MODE, MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE);
+        int mode = prefs.getInt(KEY_MONITORING_MODE, MONITORING_MODE_BROADCAST_RECEIVER);
+        return mode;
     }
 
     public static String getMonitoringModeString(Context context) {
@@ -240,6 +243,10 @@ public class Utils {
                 return "Power Receiver with Quiet Time";
             case MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE:
                 return "Power Receiver Only (Immediate)";
+            case MONITORING_MODE_WORKER:
+                return "Power Worker";
+            case MONITORING_MODE_BROADCAST_RECEIVER:
+                return "Broadcast Receiver";
             default:
                 return "Unknown";
         }
@@ -259,5 +266,59 @@ public class Utils {
         // Save current volumes
         Utils.saveVolumes(context, ringer, media, alarm);
         return message;
+    }
+
+    public static String restoreVolumes(Context context) {
+        StringBuilder message = new StringBuilder("Restore volumes: ");
+
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            message.append("audioManager is null");
+            return message.toString();
+        }
+
+        int[] savedVolumes = Utils.getSavedVolumes(context);
+        int ringer = savedVolumes[0];
+        int media = savedVolumes[1];
+        int alarm = savedVolumes[2];
+        Log.d(TAG, "restoreVolumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
+
+        try {
+            audioManager.setStreamVolume(AudioManager.STREAM_RING, ringer, 0);
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, media, 0);
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarm, 0);
+
+            audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+            message.append("ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
+        } catch (Exception e) {
+            message.append("error restoring volume; " + e.getMessage());
+        }
+
+        return message.toString();
+    }
+
+    public static String muteVolumes(Context context) {
+        StringBuilder message = new StringBuilder("Mute volumes: ");
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            message.append("audioManager is null");
+            return message.toString();
+        }
+
+        // Save current volumes
+        String savedVolumes = Utils.saveVolumes(context);
+        message.append(savedVolumes);
+        try {
+            // Set to vibrate and zero volumes
+            audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, 0);
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, 0, 0);
+
+            audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+        } catch (Exception e) {
+            message.append(", error setting ringer to vibrate; " + e.getMessage());
+        }
+        message.append(", volume muted");
+        return message.toString();
     }
 }

@@ -7,7 +7,7 @@ def currentTimestamp = new Date().format("HHmm")
 
 android {
     namespace = "com.gncbrown.getmetosleep" // From your Java package
-    compileSdk = 34 // A recent stable SDK version
+    compileSdk = 36 // A recent stable SDK version
 
     buildFeatures {
         buildConfig = true
@@ -38,6 +38,7 @@ android {
 dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
+    implementation libs.work.runtime
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

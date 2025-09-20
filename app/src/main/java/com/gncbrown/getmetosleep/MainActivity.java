@@ -1,10 +1,15 @@
 package com.gncbrown.getmetosleep;
 
+import static androidx.core.app.ServiceCompat.startForeground;
+
 import android.Manifest;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.TimePickerDialog;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -29,41 +34,50 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.work.Constraints;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
 import com.gncbrown.getmetosleep.Receivers.BootReceiver;
+import com.gncbrown.getmetosleep.Receivers.ChargingReceiver;
 import com.gncbrown.getmetosleep.Schedulers.NightlyScheduler;
+import com.gncbrown.getmetosleep.Services.ChargingService;
+import com.gncbrown.getmetosleep.Services.ChargingWorker;
+import com.gncbrown.getmetosleep.Services.NotChargingWorker;
 import com.gncbrown.getmetosleep.Utilities.DisplayTextActivity;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-//    private ChargingReceiver chargingReceiverInstance;
     private BootReceiver bootReceiverInstance;
-//    private IntentFilter powerIntentFilter;
     private IntentFilter bootIntentFilter;
+    private ChargingReceiver chargingReceiverInstance;
+    private IntentFilter powerIntentFilter;
 
     private TextView timeDisplay;
     private int savedHour = 23;   // default 11 PM
     private int savedMinute = 0;  // default 00
 
-    private Context context;
+    public static Context context;
+    private BroadcastReceiver powerReceiver;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.e(TAG, "MainActivity onCreate - VERY FIRST LINE - From Notification Flow?"); // ADDED THIS LINE
         super.onCreate(savedInstanceState);
         context = this;
-        setContentView(R.layout.activity_main);
-
+        setContentView(R.layout.activity_main); // Redundant line removed
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootLayout), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -72,20 +86,69 @@ public class MainActivity extends AppCompatActivity {
         com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.toolbar); // Or androidx.appcompat.widget.Toolbar
         setSupportActionBar(toolbar);
 
+        int chargingMode = Utils.getMonitoringMode(context);
         RadioButton radioButtonUseScheduler = findViewById(R.id.radioButtonUseScheduler);
-        radioButtonUseScheduler.setChecked(Utils.getMonitoringMode(context) == Utils.MONITORING_MODE_SCHEDULER);
+        radioButtonUseScheduler.setChecked(chargingMode == Utils.MONITORING_MODE_SCHEDULER);
         radioButtonUseScheduler.setOnClickListener(v -> {
             Utils.setMonitoringMode(context, Utils.MONITORING_MODE_SCHEDULER);
         });
         RadioButton radioButtonUseReceiver = findViewById(R.id.radioButtonUseReceiver);
-        radioButtonUseReceiver.setChecked(Utils.getMonitoringMode(context) == Utils.MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME);
+        radioButtonUseReceiver.setChecked(chargingMode == Utils.MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME);
         radioButtonUseReceiver.setOnClickListener(v -> {
             Utils.setMonitoringMode(context, Utils.MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME);
         });
         RadioButton radioButtonUseReceiverOnly = findViewById(R.id.radioButtonUseReceiverOnly);
-        radioButtonUseReceiverOnly.setChecked(Utils.getMonitoringMode(context) == Utils.MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE);
+        radioButtonUseReceiverOnly.setChecked(chargingMode == Utils.MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE);
         radioButtonUseReceiverOnly.setOnClickListener(v -> {
             Utils.setMonitoringMode(context, Utils.MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE);
+        });
+        RadioButton radioButtonUseWorker = findViewById(R.id.radioButtonUseWorker);
+        radioButtonUseWorker.setChecked(chargingMode == Utils.MONITORING_MODE_WORKER);
+        radioButtonUseWorker.setOnClickListener(v -> {
+            Utils.setMonitoringMode(context, Utils.MONITORING_MODE_WORKER);
+        });
+        RadioButton radioButtonUseBroadcastReceiver = findViewById(R.id.radioButtonUseBroadcastReceiver);
+        radioButtonUseBroadcastReceiver.setChecked(chargingMode == Utils.MONITORING_MODE_BROADCAST_RECEIVER);
+        radioButtonUseBroadcastReceiver.setOnClickListener(v -> {
+            Utils.setMonitoringMode(context, Utils.MONITORING_MODE_BROADCAST_RECEIVER);
+            try {
+                ComponentName serviceComponent = new ComponentName(context, ChargingService.class);
+                PackageManager pm = getPackageManager();
+                int componentEnabledState = pm.getComponentEnabledSetting(serviceComponent);
+                String stateString = "UNKNOWN (" + componentEnabledState + ")";
+                switch (componentEnabledState) {
+                    case PackageManager.COMPONENT_ENABLED_STATE_DEFAULT:
+                        stateString = "DEFAULT (manifest)";
+                        break;
+                    case PackageManager.COMPONENT_ENABLED_STATE_ENABLED:
+                        stateString = "ENABLED";
+                        break;
+                    case PackageManager.COMPONENT_ENABLED_STATE_DISABLED:
+                        stateString = "DISABLED";
+                        break;
+                    case PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER:
+                        stateString = "DISABLED_USER";
+                        break;
+                    case PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED:
+                        stateString = "DISABLED_UNTIL_USED";
+                        break;
+                }
+                Log.i(TAG, "Pre-start check: ChargingService component enabled state: " + stateString);
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking component enabled state for ChargingService", e);
+            }
+
+            Intent serviceIntent = new Intent(context, ChargingService.class);
+            // For Android O and above, startForegroundService is required
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent);
+                } else {
+                    context.startService(serviceIntent);
+                }
+            } catch (Exception e) {
+                Log.e("BootReceiver", "Failed to start ChargingService: " + e.getMessage());
+            }
         });
 
         Button saveButton = findViewById(R.id.buttonSaveVolumes);
@@ -131,12 +194,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Prepare for dynamic registration
-        /*
-        chargingReceiverInstance = new ChargingReceiver();
-        powerIntentFilter = new IntentFilter();
-        powerIntentFilter.addAction(Intent.ACTION_POWER_CONNECTED);
-        powerIntentFilter.addAction(Intent.ACTION_POWER_DISCONNECTED);
-         */
+        Log.d(TAG, "MainActivity onCreate. Charging mode: " + Utils.getMonitoringModeString(context));
+        if (chargingMode == Utils.MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE) {
+            chargingReceiverInstance = new ChargingReceiver();
+            powerIntentFilter = new IntentFilter();
+            powerIntentFilter.addAction(Intent.ACTION_POWER_CONNECTED);
+            powerIntentFilter.addAction(Intent.ACTION_POWER_DISCONNECTED);
+        }
 
         bootReceiverInstance = new BootReceiver();
         bootIntentFilter = new IntentFilter();
@@ -152,8 +216,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Utils.createNotificationChannel(context);
-//        Utils.showNotification(context, context.getResources().getString(R.string.app_name),
-//                "Application started");
 
         Log.d(TAG, "MainActivity onCreate completed. Receiver instance created.");
     }
@@ -329,9 +391,7 @@ public class MainActivity extends AppCompatActivity {
                     .setNegativeButton("Later", (dialog, which) -> {
                         dialog.dismiss();
                         Toast.makeText(this, "Exact alarm permission denied. Nightly checks may not function as expected.", Toast.LENGTH_LONG).show();
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            checkAndRequestDndPermission(); // Proceed to DND check
-                        }
+                        checkAndRequestDndPermission(); // Proceed to DND check
                     })
                     .create().show();
         } else {
@@ -341,13 +401,10 @@ public class MainActivity extends AppCompatActivity {
                  Log.d(TAG, "SCHEDULE_EXACT_ALARM permission already granted or not applicable on this Android version prior to S.");
             }
             // Proceed to DND check if applicable for this OS version
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                checkAndRequestDndPermission();
-            }
+            checkAndRequestDndPermission();
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void checkAndRequestDndPermission() {
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (notificationManager != null && !notificationManager.isNotificationPolicyAccessGranted()) {
@@ -376,5 +433,34 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Do Not Disturb permission already granted or not applicable on this Android version prior to M.");
             }
         }
+    }
+
+    public static void enqueueChargingWorker() {
+        Log.d(TAG, "enqueueChargingWorker");
+        Constraints chargingConstraints = new Constraints.Builder()
+                .setRequiresCharging(true)
+                .build();
+
+        OneTimeWorkRequest chargingRequest = new OneTimeWorkRequest.Builder(ChargingWorker.class)
+                .setConstraints(chargingConstraints)
+                // add a small delay to avoid immediate re-execution loops
+                .setInitialDelay(1, TimeUnit.MINUTES)
+                .build();
+
+        WorkManager.getInstance(context).enqueue(chargingRequest);
+    }
+
+    public static void enqueueNotChargingWorker() {
+        Log.d(TAG, "enqueueNotChargingWorker");
+        Constraints notChargingConstraints = new Constraints.Builder()
+                .setRequiresCharging(false)
+                .build();
+
+        OneTimeWorkRequest notChargingRequest = new OneTimeWorkRequest.Builder(NotChargingWorker.class)
+                .setConstraints(notChargingConstraints)
+                .setInitialDelay(1, TimeUnit.SECONDS)
+                .build();
+
+        WorkManager.getInstance(context).enqueue(notChargingRequest);
     }
 }

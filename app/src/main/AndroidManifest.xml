@@ -19,6 +19,9 @@
     <!-- For checking battery state, not strictly for scheduling -->
     <uses-permission android:name="android.permission.BATTERY_STATS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- If targeting Android 14 (API 34) or higher, you might also need specific foreground service types -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:allowBackup="true"
@@ -26,21 +29,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GetMeToSleep">
 
-        <receiver android:name="com.gncbrown.getmetosleep.Receivers.ChargingReceiver"
+        <service android:name=".Services.NoopService" android:exported="false" />
+        <service android:name=".Services.ChargingService" android:exported="false"
+            android:enabled="true"
+            android:foregroundServiceType="dataSync"/>
+
+        <receiver android:name=".Receivers.ChargingReceiver"
             android:enabled="true" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
                 <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
             </intent-filter>
         </receiver>
-        <receiver android:name="com.gncbrown.getmetosleep.Receivers.TestPowerReceiver"
-            android:enabled="true" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
-                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
-            </intent-filter>
-        </receiver>
-        <receiver android:name="com.gncbrown.getmetosleep.Receivers.BootReceiver"
+        <receiver android:name=".Receivers.BootReceiver"
             android:enabled="true" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -48,14 +49,13 @@
         </receiver>
 
         <receiver
-            android:name="com.gncbrown.getmetosleep.Receivers.NightlyPowerCheckReceiver"
+            android:name=".Receivers.NightlyPowerCheckReceiver"
             android:enabled="true"
             android:exported="false"> <!-- false is fine as it's triggered by AlarmManager from our app -->
             <!-- No intent-filter needed here as it's explicitly targeted by AlarmManager -->
         </receiver>
 
-
-        <activity android:name="com.gncbrown.getmetosleep.MainActivity"
+        <activity android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -64,7 +64,7 @@
         </activity>
 
         <activity
-            android:name="com.gncbrown.getmetosleep.Utilities.DisplayTextActivity"
+            android:name=".Utilities.DisplayTextActivity"
             android:label="Details"
             android:parentActivityName=".MainActivity">
             <meta-data
