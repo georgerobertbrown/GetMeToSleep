@@ -15,10 +15,10 @@ android {
 
     defaultConfig {
         applicationId = "com.gncbrown.getmetosleep"
-        minSdk = 23 // A common minimum SDK
+        minSdk = 29 // A common minimum SDK
         targetSdk = 34
         versionCode = 1
-        versionName "1.1-${currentDatestamp}${currentTimestamp}"
+        versionName "2.1-${currentDatestamp}${currentTimestamp}"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

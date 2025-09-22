@@ -7,15 +7,6 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
-    <!--
-         For Android 12 (API 31) and higher, to use setExactAndAllowWhileIdle or setExact.
-         This is a "normal" permission if targeting API 32 or lower.
-         For API 33+, it's a special app op permission the user must grant,
-         or your app must fit an exemption policy.
-         You might need to request it or guide the user.
-    -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
     <!-- For checking battery state, not strictly for scheduling -->
     <uses-permission android:name="android.permission.BATTERY_STATS"
         tools:ignore="ProtectedPermissions" />
@@ -25,34 +16,21 @@
 
     <application
         android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="GetMeToSleep"
         android:supportsRtl="true"
         android:theme="@style/Theme.GetMeToSleep">
 
-        <service android:name=".Services.NoopService" android:exported="false" />
         <service android:name=".Services.ChargingService" android:exported="false"
             android:enabled="true"
             android:foregroundServiceType="dataSync"/>
 
-        <receiver android:name=".Receivers.ChargingReceiver"
-            android:enabled="true" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
-                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
-            </intent-filter>
-        </receiver>
         <receiver android:name=".Receivers.BootReceiver"
             android:enabled="true" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".Receivers.NightlyPowerCheckReceiver"
-            android:enabled="true"
-            android:exported="false"> <!-- false is fine as it's triggered by AlarmManager from our app -->
-            <!-- No intent-filter needed here as it's explicitly targeted by AlarmManager -->
         </receiver>
 
         <activity android:name=".MainActivity"

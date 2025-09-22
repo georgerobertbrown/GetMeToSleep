@@ -16,11 +16,4 @@
         android:icon="@android:drawable/ic_menu_recent_history"
         app:showAsAction="ifRoom" />
 
-    <item
-        android:id="@+id/action_cancel_scheduler"
-        android:title="Cancel scheduler"
-        android:orderInCategory="102"
-        android:icon="@android:drawable/ic_menu_my_calendar"
-        app:showAsAction="ifRoom" />
-
 </menu>

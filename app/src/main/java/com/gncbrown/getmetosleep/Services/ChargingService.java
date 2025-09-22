@@ -1,8 +1,6 @@
 package com.gncbrown.getmetosleep.Services;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -20,11 +18,14 @@ import androidx.core.app.TaskStackBuilder;
 import com.gncbrown.getmetosleep.Utilities.DisplayTextActivity;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class ChargingService extends Service {
     private static final String TAG = "ChargingService";
 
     public static final String NOTIFICATION_CHANNEL_ID = "manage_volume_channel";
-
 
     private BroadcastReceiver powerReceiver;
 
@@ -35,15 +36,13 @@ public class ChargingService extends Service {
 
         Log.d(TAG, "onCreate: Initializing ChargingService...");
 
-        //Utils.createNotificationChannel(this);
-        createNotificationChannelIfNeeded();
+        Utils.createNotificationChannel(this); // Ensure channel is created first
 
         try {
             Log.d(TAG, "onCreate: Attempting to call startForeground...");
             Notification notification = buildNotification();
             if (notification == null) {
                 Log.e(TAG, "onCreate: buildNotification() returned null!");
-                // Consider stopping the service if the notification is essential
                 stopSelf(); 
                 return; 
             }
@@ -51,10 +50,7 @@ public class ChargingService extends Service {
             Log.d(TAG, "onCreate: Successfully called startForeground.");
         } catch (Exception e) {
             Log.e(TAG, "onCreate: EXCEPTION during startForeground call!", e);
-            // This catch block might not always catch ForegroundServiceStartNotAllowedException
-            // on newer Android versions if the conditions for startForeground aren't met,
-            // as those often lead to an ANR or direct process termination.
-            stopSelf(); // Stop the service if startForeground fails critically
+            stopSelf(); 
             return;
         }
 
@@ -62,18 +58,29 @@ public class ChargingService extends Service {
 
         powerReceiver = new BroadcastReceiver() {
             @Override
-            public void onReceive(Context context, Intent intent) {
+            public void onReceive(Context context, Intent intent) { 
                 if (intent == null || intent.getAction() == null) return;
-                Log.d(TAG, "onReceive: action=" + intent.getAction());
 
-                if (Intent.ACTION_POWER_CONNECTED.equals(intent.getAction())) {
-                    Utils.setPowerConnected(ChargingService.this, true);
-                    String message = Utils.muteVolumes(ChargingService.this);
-                    Utils.showNotification(ChargingService.this, "Charging", message);
-                } else if (Intent.ACTION_POWER_DISCONNECTED.equals(intent.getAction())) {
-                    Utils.setPowerConnected(ChargingService.this, false);
-                    String message = Utils.restoreVolumes(ChargingService.this);
+                int[] startTimes = Utils.getQuietTime(context, "start", 23, 0);
+                int[] endTimes = Utils.getQuietTime(context, "end", 7, 0);
+                boolean isBetween = Utils.isCurrentTimeBetween(startTimes, endTimes);
+                Log.d(TAG, "onReceive: action=" + intent.getAction() + ", isBetween=" + isBetween);
+
+                String message = "";
+                if (Intent.ACTION_POWER_DISCONNECTED.equals(intent.getAction())) {
+                    // Always want to restore volumes if charging is disconnected
+                    message = Utils.restoreVolumes(ChargingService.this);
                     Utils.showNotification(ChargingService.this, "Not Charging", message);
+                } else if (!isBetween) {
+                    SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm", Locale.getDefault());
+                    Date currentDate = new Date();
+                    message = "Current time: " + sdf.format(currentDate) + " is not between quiet times "
+                            + String.format(Locale.getDefault(), "%02d:%02d", startTimes[0], startTimes[1]) + " and "
+                            + String.format(Locale.getDefault(), "%02d:%02d", endTimes[0], endTimes[1]) + ".";
+                    Utils.showNotification(ChargingService.this, "ChargingService", message);
+                } else if (Intent.ACTION_POWER_CONNECTED.equals(intent.getAction())) {
+                    message = Utils.muteVolumes(ChargingService.this);
+                    Utils.showNotification(ChargingService.this, "Charging", message);
                 } else {
                     Log.w(TAG, "Unknown intent action: " + intent.getAction());
                 }
@@ -92,18 +99,19 @@ public class ChargingService extends Service {
         Log.d(TAG, "onCreate: ChargingService initialization complete.");
     }
 
-    private void createNotificationChannelIfNeeded() { // This method seems redundant if Utils.createNotificationChannel is used
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID,
-                    "Charging Monitor", NotificationManager.IMPORTANCE_LOW);
-            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            if (nm != null) nm.createNotificationChannel(channel);
-        }
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.e(TAG, "onStartCommand - Service is starting/restarting.");
+        Log.d(TAG, "onStartCommand: Intent action: " + (intent != null ? intent.getAction() : "null intent"));
+        Log.d(TAG, "onStartCommand: Flags: " + flags);
+        Log.d(TAG, "onStartCommand: Start ID: " + startId);
+        return START_STICKY;
     }
 
+    // Removed createNotificationChannelIfNeeded() from here as it's called by Utils in onCreate
+
     private Notification buildNotification() {
-        // Utils.createNotificationChannel(this) should be called before this, e.g., in onCreate
-        // createNotificationChannelIfNeeded(); // Redundant if called from onCreate via Utils
+        // Utils.createNotificationChannel(this) is now solely responsible for channel creation in onCreate.
 
         Intent displayIntent = new Intent(this, DisplayTextActivity.class);
         displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_TITLE, "Charging Service Status");
@@ -131,14 +139,14 @@ public class ChargingService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy: ChargingService being destroyed."); // Added log
+        Log.d(TAG, "onDestroy: ChargingService being destroyed."); 
         super.onDestroy();
         try {
-            if (powerReceiver != null) { // Check if receiver was registered
+            if (powerReceiver != null) { 
                 unregisterReceiver(powerReceiver);
                 Log.d(TAG, "onDestroy: PowerReceiver unregistered.");
             }
-        } catch (IllegalArgumentException e) { // More specific exception catch
+        } catch (IllegalArgumentException e) { 
             Log.w(TAG, "onDestroy: PowerReceiver was not registered or already unregistered.", e);
         } catch (Exception e) {
             Log.e(TAG, "onDestroy: Exception during unregisterReceiver.", e);
@@ -148,7 +156,7 @@ public class ChargingService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind called, returning null."); // Added log
+        Log.d(TAG, "onBind called, returning null."); 
         return null;
     }
 }

@@ -8,9 +8,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 
-import com.gncbrown.getmetosleep.MainActivity;
 import com.gncbrown.getmetosleep.Services.ChargingService;
-import com.gncbrown.getmetosleep.Services.NoopService;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
 public class BootReceiver extends BroadcastReceiver {
@@ -18,11 +16,11 @@ public class BootReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d(TAG, "onReceive: " + intent.getAction());
-        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            int chargingMode = Utils.getMonitoringMode(context);
-            Log.d(TAG, "Boot completed. Charging mode: " + Utils.getMonitoringModeString(context));
-            if (chargingMode == Utils.MONITORING_MODE_BROADCAST_RECEIVER) {
+        Log.e(TAG, "onReceive - VERY FIRST LINE IN BootReceiver");
+        if (intent != null && intent.getAction() != null) {
+            Log.d(TAG, "BootReceiver onReceive: Action: " + intent.getAction());
+            if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+                Log.i(TAG, "BOOT_COMPLETED received by BootReceiver.");
                 try {
                     ComponentName serviceComponent = new ComponentName(context, ChargingService.class);
                     PackageManager pm = context.getPackageManager();
@@ -45,41 +43,38 @@ public class BootReceiver extends BroadcastReceiver {
                             stateString = "DISABLED_UNTIL_USED";
                             break;
                     }
-                    Log.i(TAG, "Pre-start check: ChargingService component enabled state: " + stateString);
+                    Log.i(TAG, "Pre-start check from BootReceiver: ChargingService component enabled state: " + stateString);
                 } catch (Exception e) {
-                    Log.e(TAG, "Error checking component enabled state for ChargingService", e);
+                    Log.e(TAG, "Error checking component enabled state for ChargingService in BootReceiver", e);
                 }
 
-                Intent serviceIntent = new Intent(context, ChargingService.class);
-                // For Android O and above, startForegroundService is required
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(serviceIntent);
-                    } else {
-                        context.startService(serviceIntent);
+                // Check your app's setting for whether the service should be enabled
+                // This depends on how you store this preference (e.g., SharedPreferences via a Utils method)
+                // For this example, let's assume Utils.getEnableService(context) reads this preference.
+                // boolean shouldStartService = Utils.getEnableService(context); // You need to implement this
+                boolean shouldStartService = Utils.getEnableService(context);
+                Log.d(TAG, "BootReceiver: shouldStartService determined as: " + shouldStartService);
+                if (shouldStartService) {
+                    Intent serviceIntent = new Intent(context, ChargingService.class);
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(serviceIntent);
+                        } else {
+                            context.startService(serviceIntent);
+                        }
+                        Log.d(TAG, "BOOT_COMPLETED: Call to start ChargingService completed.");
+                    } catch (Exception e) {
+                        Log.e(TAG, "BOOT_COMPLETED: Failed to start ChargingService: " + e.getMessage(), e);
                     }
-                } catch (Exception e) {
-                    Log.e("BootReceiver", "Failed to start ChargingService: " + e.getMessage());
+                } else {
+                    Log.d(TAG, "BOOT_COMPLETED: ChargingService disabled.");
+                    Utils.showNotification(context, "BootReceiver", "Charging service disabled.");
                 }
             } else {
-                // Re-enqueue initial workers after boot
-                if (context instanceof MainActivity) {
-                    MainActivity.enqueueChargingWorker();
-                    MainActivity.enqueueNotChargingWorker();
-                } else {
-                    // Fallback: start a service to trigger enqueuing
-                    Intent i = new Intent(context, NoopService.class);
-                    i.setAction(NoopService.ACTION_ENQUEUE_WORKERS);
-                    context.startService(i);
-                }
+                Log.w(TAG, "BootReceiver onReceive: Received action: " + intent.getAction() + ", not BOOT_COMPLETED.");
             }
+        } else {
+            Log.w(TAG, "BootReceiver onReceive: Intent or action is null.");
         }
-
-
-//        if (intent != null && (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())
-//                || "android.intent.action.QUICKBOOT_POWERON".equals(intent.getAction()))) {
-//            Log.d(TAG, "Boot completed or quickboot. Rescheduling nightly check.");
-//            NightlyScheduler.scheduleNextNightlyCheck(context);
-//        }
     }
 }

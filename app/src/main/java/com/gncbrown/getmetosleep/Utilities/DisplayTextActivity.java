@@ -1,6 +1,7 @@
 package com.gncbrown.getmetosleep.Utilities;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.ScrollView;
@@ -76,6 +77,7 @@ public class DisplayTextActivity extends AppCompatActivity {
         }
 
         largeTextView.setText(stringBufferContent.toString());
+        //largeTextView.setTextColor(Color.BLACK); //Color.WHITE);
     }
 
     @Override

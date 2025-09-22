@@ -1,6 +1,7 @@
 package com.gncbrown.getmetosleep.Utilities;
 
 import android.Manifest;
+import android.app.ActivityManager; // Added import
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.NotificationChannel;
@@ -9,8 +10,10 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
 import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
@@ -26,6 +29,8 @@ import androidx.core.app.TaskStackBuilder;
 import com.gncbrown.getmetosleep.MainActivity;
 import com.gncbrown.getmetosleep.R;
 
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class Utils {
@@ -37,21 +42,11 @@ public class Utils {
     private static final String PREFS_NAME = "VolumePrefs";
     private static final String KEY_HOUR = "quietHour";
     private static final String KEY_MINUTE = "quietMinute";
-    private static final String KEY_POWER_CONNECTED = "powerConnected";
+    private static final String KEY_ENABLE_SERVICE = "enableService";
 
     private static final String KEY_RINGER = "ringer";
     private static final String KEY_MEDIA = "media";
     private static final String KEY_ALARM = "alarm";
-
-    // New preference key for monitoring mode
-    private static final String KEY_MONITORING_MODE = "monitoringMode";
-
-    // Monitoring mode constants
-    public static final int MONITORING_MODE_SCHEDULER = 0;                        // Nightly scheduler, respects quiet time
-    public static final int MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME = 1; // Power receiver, respects quiet time
-    public static final int MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE = 2;  // Power receiver, immediate, ignores quiet time
-    public static final int MONITORING_MODE_WORKER = 3;  // Power worker
-    public static final int MONITORING_MODE_BROADCAST_RECEIVER = 4;  // Power worker
 
 
     public static void showDialog(Context context, String title, String message, int iconId) {
@@ -122,34 +117,16 @@ public class Utils {
     }
 
     public static void showNotification(Context context, String title, String message) {
-        // Intent to launch DisplayTextActivity when the notification is tapped
         Intent displayIntent = new Intent(context, DisplayTextActivity.class);
         displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_TITLE, title);
         displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_CONTENT, message);
-        // IMPORTANT: No custom flags like NEW_TASK or CLEAR_TASK here if using TaskStackBuilder for this purpose.
 
-        // Create a TaskStackBuilder to build the back stack
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-
-        // Add the parent activity (MainActivity) to the back stack.
-        // This intent should be a simple intent to launch MainActivity.
-        Intent mainActivityIntent = new Intent(context, MainActivity.class);
-        mainActivityIntent.setAction(Intent.ACTION_MAIN); // Common action for main activities
-        mainActivityIntent.addCategory(Intent.CATEGORY_LAUNCHER); // Common category
-        // It's often good to clear top or reorder to front if MainActivity already exists in a task.
-        // However, for TaskStackBuilder, addNextIntentWithParentStack handles parent definition.
-        // If MainActivity itself needs specific launch modes defined in manifest, those will be respected.
-
-        // Create an intent for the parent stack (MainActivity)
-        // This intent will point to MainActivity
-        // addParentStack ensures that MainActivity is in the back stack.
         stackBuilder.addParentStack(MainActivity.class);
-        // Adds the DisplayTextActivity intent to the top of the stack
         stackBuilder.addNextIntent(displayIntent);
 
-        // Get the PendingIntent containing the entire back stack
         PendingIntent pendingIntent = stackBuilder.getPendingIntent(
-                REQUEST_CODE_DISPLAY_TEXT_PENDING_INTENT, // Unique request code
+                REQUEST_CODE_DISPLAY_TEXT_PENDING_INTENT, 
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
@@ -172,34 +149,31 @@ public class Utils {
         Log.d(TAG, "Notification shown with TaskStackBuilder.");
     }
 
-    public static void setQuietTime(Context context, int hour, int minute) {
+    public static void setQuietTime(Context context, int hour, int minute, String label) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putInt(KEY_HOUR, hour);
-        editor.putInt(KEY_MINUTE, minute);
+        editor.putInt(KEY_HOUR+"-" + label, hour);
+        editor.putInt(KEY_MINUTE+"_"+label, minute);
         editor.apply();
     }
 
-    public static int getQuietHour(Context context) {
+    public static int[] getQuietTime(Context context, String label, int defaultHour, int defaultMinute) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getInt(KEY_HOUR, 23);
+        int hour = prefs.getInt(KEY_HOUR+"_" + label, defaultHour);
+        int minute = prefs.getInt(KEY_MINUTE+"_" + label, defaultMinute);
+        return new int[]{hour, minute};
     }
 
-    public static int getQuietMinute(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getInt(KEY_MINUTE, 0);
-    }
-
-    public static void setPowerConnected(Context context, boolean powerConnected) {
+    public static void setEnableService(Context context, boolean enabled) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean(KEY_POWER_CONNECTED, powerConnected);
+        editor.putBoolean(KEY_ENABLE_SERVICE, enabled);
         editor.apply();
     }
 
-    public static boolean getPowerConnected(Context context) {
+    public static boolean getEnableService(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getBoolean(KEY_POWER_CONNECTED, false);
+        return prefs.getBoolean(KEY_ENABLE_SERVICE, false);
     }
 
     public static void saveVolumes(Context context, int ringer, int media, int alarm) {
@@ -219,39 +193,6 @@ public class Utils {
         return new int[]{ringer, media, alarm};
     }
 
-    // --- Monitoring Mode Preferences ---
-    public static void setMonitoringMode(Context context, int mode) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putInt(KEY_MONITORING_MODE, mode);
-        editor.apply();
-    }
-
-    public static int getMonitoringMode(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        // Default to MONITORING_MODE_SCHEDULER if no preference is set
-        int mode = prefs.getInt(KEY_MONITORING_MODE, MONITORING_MODE_BROADCAST_RECEIVER);
-        return mode;
-    }
-
-    public static String getMonitoringModeString(Context context) {
-        int mode = getMonitoringMode(context);
-        switch (mode) {
-            case MONITORING_MODE_SCHEDULER:
-                return "Scheduler";
-            case MONITORING_MODE_POWER_RECEIVER_WITH_QUIET_TIME:
-                return "Power Receiver with Quiet Time";
-            case MONITORING_MODE_POWER_RECEIVER_ONLY_IMMEDIATE:
-                return "Power Receiver Only (Immediate)";
-            case MONITORING_MODE_WORKER:
-                return "Power Worker";
-            case MONITORING_MODE_BROADCAST_RECEIVER:
-                return "Broadcast Receiver";
-            default:
-                return "Unknown";
-        }
-    }
-
     public static String saveVolumes(Context context) {
         String message = "Save volumes";
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
@@ -261,16 +202,14 @@ public class Utils {
         int media = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         int alarm = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
         message += ": ringer=" + ringer + ", media=" + media + ", alarm=" + alarm;
-        Log.d(TAG, "saveVolumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
+        Log.d(TAG, "saveVolumes: ringer=" + ringer + ", media=" + media);
 
-        // Save current volumes
         Utils.saveVolumes(context, ringer, media, alarm);
         return message;
     }
 
     public static String restoreVolumes(Context context) {
         StringBuilder message = new StringBuilder("Restore volumes: ");
-
         AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (audioManager == null) {
             message.append("audioManager is null");
@@ -281,19 +220,16 @@ public class Utils {
         int ringer = savedVolumes[0];
         int media = savedVolumes[1];
         int alarm = savedVolumes[2];
-        Log.d(TAG, "restoreVolumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
+        Log.d(TAG, "restoreVolumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm + ", alarm=" + alarm);
 
         try {
             audioManager.setStreamVolume(AudioManager.STREAM_RING, ringer, 0);
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, media, 0);
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, alarm, 0);
-
             audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-            message.append("ringer=" + ringer + ", media=" + media + ", alarm=" + alarm);
+            message.append("ringer=" + ringer + ", media=" + media);
         } catch (Exception e) {
             message.append("error restoring volume; " + e.getMessage());
         }
-
         return message.toString();
     }
 
@@ -305,20 +241,148 @@ public class Utils {
             return message.toString();
         }
 
-        // Save current volumes
         String savedVolumes = Utils.saveVolumes(context);
         message.append(savedVolumes);
         try {
-            // Set to vibrate and zero volumes
             audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, 0);
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, 0, 0);
-
             audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
         } catch (Exception e) {
             message.append(", error setting ringer to vibrate; " + e.getMessage());
         }
         message.append(", volume muted");
         return message.toString();
+    }
+
+    public static String getAppServices(Context context) {
+        StringBuffer message = new StringBuffer("Services:\n");
+        PackageManager pm = context.getPackageManager();
+        String packageName = context.getPackageName();
+
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningServiceInfo> runningServices = null;
+        if (manager != null) {
+            try {
+                runningServices = manager.getRunningServices(Integer.MAX_VALUE);
+            } catch (Exception e) {
+                Log.e(TAG, "Could not get running services list", e);
+            }
+        }
+
+        try {
+            PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_SERVICES);
+            if (packageInfo.services != null && packageInfo.services.length > 0) {
+                Log.i(TAG, "Services declared in this app (" + packageName + "):");
+                for (ServiceInfo serviceInfo : packageInfo.services) {
+                    String serviceName = serviceInfo.name;
+                    message.append("Service Name: ").append(serviceName);
+
+                    boolean isRunning = false;
+                    if (runningServices != null) {
+                        for (ActivityManager.RunningServiceInfo runningService : runningServices) {
+                            if (serviceName.equals(runningService.service.getClassName())) {
+                                isRunning = true;
+                                break;
+                            }
+                        }
+                    }
+                    message.append("  Foreground service type: ").append(foregroundServiceTypeToString(serviceInfo.getForegroundServiceType())).append("\n");
+                    message.append("  Running: ").append(isRunning).append("\n");
+                    message.append("  Enabled: ").append(serviceInfo.enabled).append("\n");
+                    message.append("  Exported: ").append(serviceInfo.exported).append("\n");
+                    if (serviceInfo.permission != null) {
+                        message.append("  Permission: ").append(serviceInfo.permission).append("\n");
+                    }
+                    message.append("\n");
+                }
+            } else {
+                Log.i(TAG, "No services declared in this app.");
+                message.append("No services declared in this app.\n");
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            message.append("Could not find package info for ").append(packageName).append(": ").append(e.getMessage()).append("\n");
+            Log.e(TAG, "Could not find package info for " + packageName, e);
+        }
+        return message.toString();
+    }
+
+    public static String foregroundServiceTypeToString(int foregroundServiceType) {
+        if (foregroundServiceType == ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE) {
+            return "NONE";
+        }
+        if (foregroundServiceType == ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST) {
+            return "MANIFEST_DERIVED_OR_DEFAULT";
+        }
+
+        List<String> types = new ArrayList<>();
+
+        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) != 0) {
+            types.add("DATA_SYNC");
+        }
+        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) != 0) {
+            types.add("MEDIA_PLAYBACK");
+        }
+        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL) != 0) {
+            types.add("PHONE_CALL");
+        }
+        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION) != 0) {
+            types.add("LOCATION");
+        }
+        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) != 0) {
+            types.add("CONNECTED_DEVICE");
+        }
+        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) != 0) {
+            types.add("MEDIA_PROJECTION");
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA) != 0) {
+                types.add("CAMERA");
+            }
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) != 0) {
+                types.add("MICROPHONE");
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { 
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE) != 0) {
+                types.add("SHORT_SERVICE");
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { 
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH) != 0) {
+                types.add("HEALTH");
+            }
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING) != 0) {
+                types.add("REMOTE_MESSAGING");
+            }
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED) != 0) {
+                types.add("SYSTEM_EXEMPTED");
+            }
+            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) != 0) {
+                types.add("SPECIAL_USE");
+            }
+        }
+
+        if (types.isEmpty()) {
+            return "UNKNOWN_TYPE_OR_COMBINATION (" + foregroundServiceType + ")";
+        }
+
+        return String.join(" | ", types);
+    }
+
+    public static boolean isCurrentTimeBetween(int[] startTime, int[] endTime) {
+        Calendar now = Calendar.getInstance();
+        int currentHour = now.get(Calendar.HOUR_OF_DAY);
+        int currentMinute = now.get(Calendar.MINUTE);
+
+        int startTimeInMinutes = startTime[0] * 60 + startTime[1];
+        int endTimeInMinutes = endTime[0] * 60 + endTime[1];
+        int currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+        if (startTimeInMinutes <= endTimeInMinutes) {
+            return currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
+        } else {
+            return currentTimeInMinutes >= startTimeInMinutes || currentTimeInMinutes < endTimeInMinutes;
+        }
     }
 }

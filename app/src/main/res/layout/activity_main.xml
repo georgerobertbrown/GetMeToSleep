@@ -23,89 +23,55 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/timeDisplay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:text="Quiet Time Start: 23:00"
-        android:textSize="18sp" />
-
-        <Button
-            android:id="@+id/setTimeButton"
+        <TextView
+            android:id="@+id/startTimeDisplay"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Set Quiet Time" />
+            android:padding="8dp"
+            android:text="Quiet Start Time: 23:00"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/setStartTimeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set Time" />
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/endTimeDisplay"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="12dp"
-            android:orientation="vertical">
+            android:padding="8dp"
+            android:text="Quiet End Time: 07:00"
+            android:textSize="18sp" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Charge Detection"
-                android:textSize="18sp" />
-
-            <RadioGroup
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="6dp">
-
-                <RadioButton
-                    android:id="@+id/radioButtonUseScheduler"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="2dp"
-                    android:minHeight="0dp"
-                    android:text="Use scheduler" />
-
-                <RadioButton
-                    android:id="@+id/radioButtonUseReceiver"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="0dp"
-                    android:text="Use power receiver with quiet time" />
-
-                <RadioButton
-                    android:id="@+id/radioButtonUseReceiverOnly"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="0dp"
-                    android:text="Use power receiver only" />
-
-                <RadioButton
-                    android:id="@+id/radioButtonUseWorker"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="0dp"
-                    android:text="Use worker" />
-
-                <RadioButton
-                    android:id="@+id/radioButtonUseBroadcastReceiver"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:minHeight="0dp"
-                    android:text="Use broadcast receiver" />
-            </RadioGroup>
-        </LinearLayout>
-
+        <Button
+            android:id="@+id/setEndTimeButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set Time" />
     </LinearLayout>
+
+    <Switch
+        android:id="@+id/switchEnable"
+        android:layout_width="wrap_content" 
+        android:layout_height="wrap_content"
+        android:text="Enable service"
+        android:textSize="18sp"
+        android:layout_marginLeft="6dp"/>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="12dp"
+        android:layout_marginLeft="6dp"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/buttonSaveVolumes"
