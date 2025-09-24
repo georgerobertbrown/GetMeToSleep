@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Utilities.LogViewerActivity">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/log_viewer_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        app:title="App Log Viewer"
+        app:titleTextColor="?attr/colorOnPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/LogViewer.PopupOverlay" /> <!-- Changed this line -->
+
+    <ScrollView
+        android:id="@+id/log_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/log_viewer_toolbar"
+        android:fillViewport="true">
+
+        <TextView
+            android:id="@+id/log_content_textview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textIsSelectable="true"
+            android:text="@string/loading_logs" />
+    </ScrollView>
+
+</RelativeLayout>

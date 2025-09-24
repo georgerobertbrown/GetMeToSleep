@@ -18,6 +18,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -37,6 +38,8 @@ import androidx.core.view.WindowInsetsCompat;
 import com.gncbrown.getmetosleep.Receivers.BootReceiver;
 import com.gncbrown.getmetosleep.Services.ChargingService;
 import com.gncbrown.getmetosleep.Utilities.DisplayTextActivity;
+import com.gncbrown.getmetosleep.Utilities.FileLogger;
+import com.gncbrown.getmetosleep.Utilities.LogViewerActivity;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
 import java.util.List;
@@ -73,6 +76,10 @@ public class MainActivity extends AppCompatActivity {
         com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.toolbar); 
         setSupportActionBar(toolbar);
 
+        FileLogger.initialize(this);
+        FileLogger.getInstance().i(TAG, "App started and FileLogger initialized.");
+
+
         Switch switchEnable = findViewById(R.id.switchEnable);
         switchEnable.setChecked(Utils.getEnableService(context));
         switchEnable.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -90,6 +97,17 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Utils.showNotification(context, "Charging Service", "Charging service started.");
             }
+        });
+
+        CheckBox alwaysRestoreVolumes = findViewById(R.id.checkBoxAlwaysRestoreVolumes);
+        alwaysRestoreVolumes.setChecked(Utils.getAlwaysRestoreVolumes(context));
+        alwaysRestoreVolumes.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Utils.setAlwaysRestoreVolumes(context, isChecked);
+        });
+        CheckBox debugMode = findViewById(R.id.checkBoxDebugMode);
+        debugMode.setChecked(Utils.getDebugMode(context));
+        debugMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            Utils.setDebugMode(context, isChecked);
         });
 
         Button saveButton = findViewById(R.id.buttonSaveVolumes);
@@ -160,6 +178,11 @@ public class MainActivity extends AppCompatActivity {
             checkAndRequestPostNotificationsPermission(); 
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkAndRequestDndPermission(); 
+        }
+
+        if (Utils.isAppBatteryOptimized(context)) {
+            Utils.showNotification(context, "Battery Optimized",
+                    "Battery is optimized for this app. Recommend going to Settings > Apps > See all apps > GetMeToSleep > App battery usage and set to Unrestricted.");
         }
 
         Utils.createNotificationChannel(context);
@@ -246,6 +269,13 @@ public class MainActivity extends AppCompatActivity {
                     .toString());
             intent.putExtra(DisplayTextActivity.EXTRA_TEXT_TITLE, "Receivers");
             startActivity(intent);
+            return true;
+        } else if (itemId == R.id.action_logfile) {
+            Intent intent = new Intent(MainActivity.this, LogViewerActivity.class);
+            startActivity(intent);
+            return true;
+        }  else if (itemId == R.id.action_close) {
+            finish();
             return true;
         }
         return super.onOptionsItemSelected(item);

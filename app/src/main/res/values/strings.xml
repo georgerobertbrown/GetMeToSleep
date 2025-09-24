@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">GetMeToSleep</string>
+    <string name="loading_logs">Loading logs...</string>
+    <string name="log_file_not_found">Log file not found or is empty.</string>
+    <string name="error_reading_log_file">Error reading log file.</string>
+    <string name="confirm_purge_log_title">Confirm Purge</string>
+    <string name="confirm_purge_log_message">Are you sure you want to permanently delete all log entries?</string>
+    <string name="action_purge">Purge</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="log_purged_message">Log file has been purged.</string>
 </resources>

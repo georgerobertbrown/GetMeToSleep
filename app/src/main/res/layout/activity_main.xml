@@ -16,7 +16,9 @@
         android:background="?attr/colorPrimary"
         android:elevation="4dp"
         android:title="@string/app_name"
-        app:titleTextColor="?attr/colorOnPrimary" />
+        app:titleTextColor="?attr/colorOnPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:popupTheme="@style/LogViewer.PopupOverlay" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -58,13 +60,43 @@
             android:text="Set Time" />
     </LinearLayout>
 
-    <Switch
-        android:id="@+id/switchEnable"
-        android:layout_width="wrap_content" 
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Enable service"
-        android:textSize="18sp"
-        android:layout_marginLeft="6dp"/>
+        android:orientation="horizontal">
+
+        <Switch
+            android:id="@+id/switchEnable"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:text="Enable service"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <CheckBox
+            android:id="@+id/checkBoxAlwaysRestoreVolumes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="12dp"
+            android:layout_weight="1"
+            android:text="Always restore volumes"
+            android:textSize="18sp" />
+
+        <CheckBox
+            android:id="@+id/checkBoxDebugMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="12dp"
+            android:layout_weight="1"
+            android:text="Debug mode"
+            android:textSize="18sp" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"

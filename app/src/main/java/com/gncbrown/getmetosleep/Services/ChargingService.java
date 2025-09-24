@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.TaskStackBuilder;
 
 import com.gncbrown.getmetosleep.Utilities.DisplayTextActivity;
+import com.gncbrown.getmetosleep.Utilities.FileLogger;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
 import java.text.SimpleDateFormat;
@@ -35,7 +36,7 @@ public class ChargingService extends Service {
         super.onCreate();
 
         Log.d(TAG, "onCreate: Initializing ChargingService...");
-
+        FileLogger.getInstance().i(TAG, "Service started.");
         Utils.createNotificationChannel(this); // Ensure channel is created first
 
         try {
@@ -43,14 +44,18 @@ public class ChargingService extends Service {
             Notification notification = buildNotification();
             if (notification == null) {
                 Log.e(TAG, "onCreate: buildNotification() returned null!");
-                stopSelf(); 
+                FileLogger.getInstance().e(TAG, "onCreate: buildNotification() returned null!");
+                stopSelf();
                 return; 
             }
             startForeground(1, notification);
             Log.d(TAG, "onCreate: Successfully called startForeground.");
+            FileLogger.getInstance().i(TAG, "onCreate: Successfully called startForeground.");
         } catch (Exception e) {
             Log.e(TAG, "onCreate: EXCEPTION during startForeground call!", e);
-            stopSelf(); 
+            FileLogger.getInstance().e(TAG, "onCreate: EXCEPTION during startForeground call!"
+                + "\nException: " + e.getMessage());
+            stopSelf();
             return;
         }
 
@@ -58,7 +63,8 @@ public class ChargingService extends Service {
 
         powerReceiver = new BroadcastReceiver() {
             @Override
-            public void onReceive(Context context, Intent intent) { 
+            public void onReceive(Context context, Intent intent) {
+                FileLogger.getInstance().i(TAG, "power BroadReceiver, intent=" + intent);
                 if (intent == null || intent.getAction() == null) return;
 
                 int[] startTimes = Utils.getQuietTime(context, "start", 23, 0);
@@ -68,21 +74,29 @@ public class ChargingService extends Service {
 
                 String message = "";
                 if (Intent.ACTION_POWER_DISCONNECTED.equals(intent.getAction())) {
-                    // Always want to restore volumes if charging is disconnected
-                    message = Utils.restoreVolumes(ChargingService.this);
+                    if (Utils.getAlwaysRestoreVolumes(context) || isBetween) {
+                        message = Utils.restoreVolumes(ChargingService.this);
+                    } else {
+                        message = "Skipping restoring volumes, not between quiet times. or alwaysRestoreVolumes is false.";
+                        Log.d(TAG, message);
+                        FileLogger.getInstance().i(TAG, "Skipping restoring volumes, not between quiet times. or alwaysRestoreVolumes is false.");
+                    }
                     Utils.showNotification(ChargingService.this, "Not Charging", message);
-                } else if (!isBetween) {
+                } else if (!isBetween && !Utils.getDebugMode(context)) {
                     SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm", Locale.getDefault());
                     Date currentDate = new Date();
                     message = "Current time: " + sdf.format(currentDate) + " is not between quiet times "
                             + String.format(Locale.getDefault(), "%02d:%02d", startTimes[0], startTimes[1]) + " and "
                             + String.format(Locale.getDefault(), "%02d:%02d", endTimes[0], endTimes[1]) + ".";
+                    FileLogger.getInstance().i(TAG, message);
                     Utils.showNotification(ChargingService.this, "ChargingService", message);
                 } else if (Intent.ACTION_POWER_CONNECTED.equals(intent.getAction())) {
                     message = Utils.muteVolumes(ChargingService.this);
+                    FileLogger.getInstance().i(TAG, "Charging: " + message);
                     Utils.showNotification(ChargingService.this, "Charging", message);
                 } else {
                     Log.w(TAG, "Unknown intent action: " + intent.getAction());
+                    FileLogger.getInstance().w(TAG, "Unknown intent action: " + intent.getAction());
                 }
             }
         };
@@ -97,6 +111,7 @@ public class ChargingService extends Service {
         }
         Log.d(TAG, "onCreate: PowerReceiver registered.");
         Log.d(TAG, "onCreate: ChargingService initialization complete.");
+        FileLogger.getInstance().i(TAG, "onCreate: PowerReceiver registered.");
     }
 
     @Override
@@ -139,7 +154,9 @@ public class ChargingService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy: ChargingService being destroyed."); 
+        Log.d(TAG, "onDestroy: ChargingService being destroyed.");
+        FileLogger.getInstance().i(TAG, "onDestroy: ChargingService being destroyed.");
+        Utils.showNotification(this, "Charging Service", "Charging service stopped.");
         super.onDestroy();
         try {
             if (powerReceiver != null) { 

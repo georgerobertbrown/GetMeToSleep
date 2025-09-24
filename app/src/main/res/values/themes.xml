@@ -14,4 +14,15 @@
     </style>
 
     <style name="Theme.GetMeToSleep" parent="Base.Theme.GetMeToSleep" />
+
+    <!-- Custom Popup Theme for LogViewerActivity Toolbar -->
+    <style name="LogViewer.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark">
+        <!-- This ensures the text color in the popup menu is light -->
+        <item name="android:textColorPrimary">@android:color/white</item>
+        <!-- For Material Components, sometimes itemTextColor is needed for menus -->
+        <item name="itemTextColor">@android:color/white</item>
+        <!-- You can also force a specific background if necessary,
+             but ThemeOverlay.AppCompat.Dark should generally handle this.
+             <item name="android:background">@android:color/black</item> -->
+    </style>
 </resources>

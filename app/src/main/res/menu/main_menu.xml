@@ -16,4 +16,18 @@
         android:icon="@android:drawable/ic_menu_recent_history"
         app:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/action_logfile"
+        android:title="Log file"
+        android:orderInCategory="102"
+        android:icon="@android:drawable/ic_menu_view"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_close"
+        android:title="Close"
+        android:orderInCategory="103"
+        android:icon="@android:drawable/ic_menu_close_clear_cancel"
+        app:showAsAction="ifRoom" />
+
 </menu>

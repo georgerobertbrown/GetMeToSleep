@@ -15,7 +15,10 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,6 +46,8 @@ public class Utils {
     private static final String KEY_HOUR = "quietHour";
     private static final String KEY_MINUTE = "quietMinute";
     private static final String KEY_ENABLE_SERVICE = "enableService";
+    private static final String KEY_ALWAYS_RESTORE_VOLUMES = "alwaysRestoreVolumes";
+    private static final String KEY_DEBUG_MODE = "debugMode";
 
     private static final String KEY_RINGER = "ringer";
     private static final String KEY_MEDIA = "media";
@@ -176,7 +181,32 @@ public class Utils {
         return prefs.getBoolean(KEY_ENABLE_SERVICE, false);
     }
 
+    public static void setAlwaysRestoreVolumes(Context context, boolean alwaysSave) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(KEY_ALWAYS_RESTORE_VOLUMES, alwaysSave);
+        editor.apply();
+    }
+
+    public static boolean getAlwaysRestoreVolumes(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_ALWAYS_RESTORE_VOLUMES, true);
+    }
+
+    public static void setDebugMode(Context context, boolean debugMode) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(KEY_DEBUG_MODE, debugMode);
+        editor.apply();
+    }
+
+    public static boolean getDebugMode(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_DEBUG_MODE, false);
+    }
+
     public static void saveVolumes(Context context, int ringer, int media, int alarm) {
+        FileLogger.getInstance().i(TAG, "Save volumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm + ".");
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
         editor.putInt(KEY_RINGER, ringer);
@@ -221,6 +251,7 @@ public class Utils {
         int media = savedVolumes[1];
         int alarm = savedVolumes[2];
         Log.d(TAG, "restoreVolumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm + ", alarm=" + alarm);
+        FileLogger.getInstance().i(TAG, "Restore volumes: ringer=" + ringer + ", media=" + media + ", alarm=" + alarm + ".");
 
         try {
             audioManager.setStreamVolume(AudioManager.STREAM_RING, ringer, 0);
@@ -275,7 +306,7 @@ public class Utils {
                 Log.i(TAG, "Services declared in this app (" + packageName + "):");
                 for (ServiceInfo serviceInfo : packageInfo.services) {
                     String serviceName = serviceInfo.name;
-                    message.append("Service Name: ").append(serviceName);
+                    message.append("Service Name: ").append(serviceName).append("\n");
 
                     boolean isRunning = false;
                     if (runningServices != null) {
@@ -383,6 +414,75 @@ public class Utils {
             return currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes < endTimeInMinutes;
         } else {
             return currentTimeInMinutes >= startTimeInMinutes || currentTimeInMinutes < endTimeInMinutes;
+        }
+    }
+
+    public static boolean isAppBatteryOptimized(Context context) {
+        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        if (powerManager != null) {
+            String packageName = context.getPackageName();
+            // isIgnoringBatteryOptimizations() returns true if the app is "Unrestricted"
+            // So, if it's false, the app IS being optimized (either "Optimized" or "Restricted")
+            boolean isIgnoringOptimizations = powerManager.isIgnoringBatteryOptimizations(packageName);
+            Log.d("BatteryOptimization", "Is app ignoring battery optimizations (Unrestricted)? " + isIgnoringOptimizations);
+            return !isIgnoringOptimizations; // True if optimized, false if unrestricted
+        }
+        // For versions before Marshmallow, this concept was handled differently
+        // or less explicitly. Assume not explicitly optimized in the same way.
+        // Or, you might consider it "optimized" by default if you can't check.
+        return false; // Or true, depending on how you want to interpret pre-M behavior
+    }
+
+    /**
+     * Directs the user to the battery optimization settings screen for this app,
+     * or to the general battery optimization settings if the specific screen isn't available.
+     * This allows the user to change the setting if they wish.
+     */
+    public static void requestIgnoreBatteryOptimizations(Context context) {
+        Intent intent = new Intent();
+        String packageName = context.getPackageName();
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+
+        // First, check if already ignoring
+        if (pm != null && pm.isIgnoringBatteryOptimizations(packageName)) {
+            Log.d("BatteryOptimization", "App is already ignoring battery optimizations (Unrestricted).");
+            // Optionally show a message to the user
+            // Utils.showAlertDialog(context, "Battery Settings", "App is already set to Unrestricted.");
+            return;
+        }
+
+        // Android M and above: ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+        // This takes the user directly to the screen to exempt *your* app.
+        // Note: Some manufacturers might customize this screen or flow.
+        try {
+            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + packageName));
+            if (intent.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(intent);
+                return;
+            }
+            Log.w("BatteryOptimization", "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS not resolvable.");
+        } catch (Exception e) {
+            Log.e("BatteryOptimization", "Error trying ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", e);
+        }
+
+        // Fallback: ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS (general settings)
+        // This usually takes the user to the list of all apps for battery optimization.
+        // It's less direct but a good fallback.
+        try {
+            Log.d("BatteryOptimization", "Falling back to ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS");
+            Intent fallbackIntent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            if (fallbackIntent.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(fallbackIntent);
+            } else {
+                Log.w("BatteryOptimization", "ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS not resolvable.");
+                // As a last resort, maybe open general app settings
+                // Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                // appSettingsIntent.setData(Uri.parse("package:" + packageName));
+                // context.startActivity(appSettingsIntent);
+            }
+        } catch (Exception e) {
+            Log.e("BatteryOptimization", "Error trying ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS fallback", e);
         }
     }
 }

@@ -9,6 +9,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.gncbrown.getmetosleep.Services.ChargingService;
+import com.gncbrown.getmetosleep.Utilities.FileLogger;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
 public class BootReceiver extends BroadcastReceiver {
@@ -19,6 +20,8 @@ public class BootReceiver extends BroadcastReceiver {
         Log.e(TAG, "onReceive - VERY FIRST LINE IN BootReceiver");
         if (intent != null && intent.getAction() != null) {
             Log.d(TAG, "BootReceiver onReceive: Action: " + intent.getAction());
+            FileLogger.getInstance().i(TAG, "Received BOOT_COMPLETED intent, action="
+                    + intent.getAction());
             if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
                 Log.i(TAG, "BOOT_COMPLETED received by BootReceiver.");
                 try {
@@ -54,6 +57,7 @@ public class BootReceiver extends BroadcastReceiver {
                 // boolean shouldStartService = Utils.getEnableService(context); // You need to implement this
                 boolean shouldStartService = Utils.getEnableService(context);
                 Log.d(TAG, "BootReceiver: shouldStartService determined as: " + shouldStartService);
+                FileLogger.getInstance().d(TAG, "BootReceiver: shouldStartService determined as: " + shouldStartService);
                 if (shouldStartService) {
                     Intent serviceIntent = new Intent(context, ChargingService.class);
                     try {
@@ -63,18 +67,23 @@ public class BootReceiver extends BroadcastReceiver {
                             context.startService(serviceIntent);
                         }
                         Log.d(TAG, "BOOT_COMPLETED: Call to start ChargingService completed.");
+                        FileLogger.getInstance().d(TAG, "BOOT_COMPLETED: Call to start ChargingService completed.");
                     } catch (Exception e) {
                         Log.e(TAG, "BOOT_COMPLETED: Failed to start ChargingService: " + e.getMessage(), e);
+                        FileLogger.getInstance().e(TAG, "BOOT_COMPLETED: Failed to start ChargingService: " + e.getMessage());
                     }
                 } else {
                     Log.d(TAG, "BOOT_COMPLETED: ChargingService disabled.");
+                    FileLogger.getInstance().d(TAG, "BOOT_COMPLETED: ChargingService disabled.");
                     Utils.showNotification(context, "BootReceiver", "Charging service disabled.");
                 }
             } else {
                 Log.w(TAG, "BootReceiver onReceive: Received action: " + intent.getAction() + ", not BOOT_COMPLETED.");
+                FileLogger.getInstance().w(TAG, "BootReceiver onReceive: Received action: " + intent.getAction() + ", not BOOT_COMPLETED.");
             }
         } else {
             Log.w(TAG, "BootReceiver onReceive: Intent or action is null.");
+            FileLogger.getInstance().w(TAG, "BootReceiver onReceive: Intent or action is null.");
         }
     }
 }
