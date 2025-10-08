@@ -1,0 +1,4 @@
+1. Complete Log viewer implementation
+2. Notifications
+3. Info, change log and Help options
+4. Implemented daily power monitor launched at quiet start time

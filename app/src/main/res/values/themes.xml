@@ -1,16 +1,31 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.GetMeToSleep" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-        <!-- <item name="colorPrimaryVariant">@color/my_light_primary_variant</item> -->
-        <!-- <item name="colorOnPrimary">@color/white</item> -->
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">#424242</item> <!-- Grey 800 -->
+        <item name="colorPrimaryVariant">#212121</item> <!-- Grey 900 -->
+        <item name="colorOnPrimary">@android:color/white</item>
+
         <!-- Secondary brand color. -->
-        <!-- <item name="colorSecondary">@color/my_light_secondary</item> -->
-        <!-- <item name="colorSecondaryVariant">@color/my_light_secondary_variant</item> -->
-        <!-- <item name="colorOnSecondary">@color/black</item> -->
+        <item name="colorSecondary">#616161</item> <!-- Grey 700 -->
+        <item name="colorSecondaryVariant">#373737</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+
         <!-- Status bar color. -->
-        <!-- <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item> -->
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+
+        <!-- Set the custom Material alert dialog theme -->
+        <item name="materialAlertDialogTheme">@style/App.Dark.AlertDialogTheme</item>
+    </style>
+
+    <!-- Custom Dark AlertDialog theme using MaterialComponents for compatibility -->
+    <style name="App.Dark.AlertDialogTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <!-- Set the background color of the dialog -->
+        <item name="colorSurface">#424242</item> <!-- Using your primary dark gray -->
+        <!-- Set the title and body text color -->
+        <item name="colorOnSurface">@android:color/white</item>
+        <!-- Set the button text color -->
+        <item name="colorPrimary">@android:color/white</item>
     </style>
 
     <style name="Theme.GetMeToSleep" parent="Base.Theme.GetMeToSleep" />
@@ -21,8 +36,5 @@
         <item name="android:textColorPrimary">@android:color/white</item>
         <!-- For Material Components, sometimes itemTextColor is needed for menus -->
         <item name="itemTextColor">@android:color/white</item>
-        <!-- You can also force a specific background if necessary,
-             but ThemeOverlay.AppCompat.Dark should generally handle this.
-             <item name="android:background">@android:color/black</item> -->
     </style>
 </resources>

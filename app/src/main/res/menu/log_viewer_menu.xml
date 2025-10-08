@@ -4,23 +4,34 @@
 
     <item
         android:id="@+id/action_filter_logs"
-        android:title="Filter..."
+        android:title="Filter"
         android:icon="@android:drawable/ic_menu_search"
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
     <item
-        android:id="@+id/action_sort_newest_first"
-        android:title="Sort Newest First"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_sort_oldest_first"
-        android:title="Sort Oldest First"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/action_purge_log"
-        android:title="Purge..."
+        android:title="Purge Log File"
         app:showAsAction="never" />
+
+    <!-- Parent "Sort" menu item -->
+    <item
+        android:id="@+id/action_sort_submenu"
+        android:title="Sort"
+        app:showAsAction="never">
+        <!-- Nested menu for sort options -->
+        <menu>
+            <item
+                android:id="@+id/action_sort_newest_first"
+                android:title="Sort Newest First"
+                android:icon="@android:drawable/ic_menu_sort_alphabetically"
+                app:showAsAction="never" />
+
+            <item
+                android:id="@+id/action_sort_oldest_first"
+                android:title="Sort Oldest First"
+                android:icon="@android:drawable/ic_menu_sort_by_size"
+                app:showAsAction="never" />
+        </menu>
+    </item>
 </menu>

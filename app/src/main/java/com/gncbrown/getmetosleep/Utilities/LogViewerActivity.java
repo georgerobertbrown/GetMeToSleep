@@ -112,13 +112,13 @@ public class LogViewerActivity extends AppCompatActivity {
                         if (currentLine.contains(ERROR_TAG)) {
                             color = Color.RED;
                         } else if (currentLine.contains(WARNING_TAG)) {
-                            color = Color.rgb(255, 165, 0); // Orange
+                            color = Color.YELLOW; //Color.rgb(255, 165, 0); // Orange
                         } else if (currentLine.contains(INFO_TAG)) {
                             color = Color.GREEN;
                         } else if (currentLine.contains(DEBUG_TAG)) {
                             color = Color.BLUE;
                         } else if (currentLine.contains(VERBOSE_TAG)) {
-                            color = Color.GRAY;
+                            //color = Color.BLACK; //Color.GRAY;
                         }
 
                         int start = spannableLog.length();

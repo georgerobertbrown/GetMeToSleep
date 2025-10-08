@@ -3,11 +3,33 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/action_about"
-        android:title="About"
-        android:orderInCategory="100"
+        android:title="Info"
         android:icon="@android:drawable/ic_menu_info_details"
-        app:showAsAction="ifRoom" />
+        android:orderInCategory="100"
+        app:showAsAction="ifRoom">
+        <menu>
+            <item
+                android:id="@+id/action_about"
+                android:title="About"
+                android:icon="@android:drawable/ic_menu_info_details"
+                android:orderInCategory="1"
+                app:showAsAction="never" />
+
+            <item
+                android:id="@+id/action_help"
+                android:title="Help"
+                android:icon="@android:drawable/ic_menu_help"
+                android:orderInCategory="2"
+                app:showAsAction="never" />
+
+            <item
+                android:id="@+id/action_releases"
+                android:title="Change log"
+                android:icon="@android:drawable/ic_menu_recent_history"
+                android:orderInCategory="3"
+                app:showAsAction="never" />
+        </menu>
+    </item>
 
     <item
         android:id="@+id/action_receivers"

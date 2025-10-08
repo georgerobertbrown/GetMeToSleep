@@ -1,8 +1,7 @@
 package com.gncbrown.getmetosleep.Utilities;
 
 import android.Manifest;
-import android.app.ActivityManager; // Added import
-import android.app.AlertDialog;
+import android.app.ActivityManager;
 import android.app.Dialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -15,10 +14,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.media.AudioManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,10 +28,13 @@ import androidx.core.app.TaskStackBuilder;
 
 import com.gncbrown.getmetosleep.MainActivity;
 import com.gncbrown.getmetosleep.R;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class Utils {
     private static final String TAG = "Utils";
@@ -54,6 +54,20 @@ public class Utils {
     private static final String KEY_ALARM = "alarm";
 
 
+    public static String getFullVersion() {
+        String buildVersion = com.gncbrown.getmetosleep.BuildConfig.VERSION_NAME;
+        String versionName = MainActivity.context.getResources().getString(
+                R.string.app_name);
+        return versionName + " v" + buildVersion;
+    }
+
+    public static String getBriefVersion() {
+        String buildVersion = com.gncbrown.getmetosleep.BuildConfig.VERSION_NAME;
+        String versionName = MainActivity.context.getResources().getString(
+                R.string.versionName);
+        return buildVersion; //versionName;
+    }
+
     public static void showDialog(Context context, String title, String message, int iconId) {
         if (context == null) {
             Log.e(TAG, "showDialog: context is null, title: " + title + ", message: " + message);
@@ -65,7 +79,7 @@ public class Utils {
             TextView messageTextView = dialogView.findViewById(R.id.scrollable_message);
             messageTextView.setText(message);
 
-            AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(context);
+            MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(context);
             dialogBuilder.setPositiveButton("OK", (dialog, which) -> dialog.dismiss());
             dialogBuilder.setTitle(title);
             dialogBuilder.setIcon(iconId);
@@ -122,6 +136,10 @@ public class Utils {
     }
 
     public static void showNotification(Context context, String title, String message) {
+        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss", Locale.getDefault());
+        Date currentDate = new Date();
+        message = sdf.format(currentDate) + ": " + message;
+
         Intent displayIntent = new Intent(context, DisplayTextActivity.class);
         displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_TITLE, title);
         displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_CONTENT, message);
@@ -272,14 +290,12 @@ public class Utils {
             return message.toString();
         }
 
-        String savedVolumes = Utils.saveVolumes(context);
-        message.append(savedVolumes);
         try {
             audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, 0);
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0);
             audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
         } catch (Exception e) {
-            message.append(", error setting ringer to vibrate; " + e.getMessage());
+            message.append("error setting ringer to vibrate; " + e.getMessage());
         }
         message.append(", volume muted");
         return message.toString();
@@ -320,85 +336,38 @@ public class Utils {
                     message.append("  Foreground service type: ").append(foregroundServiceTypeToString(serviceInfo.getForegroundServiceType())).append("\n");
                     message.append("  Running: ").append(isRunning).append("\n");
                     message.append("  Enabled: ").append(serviceInfo.enabled).append("\n");
-                    message.append("  Exported: ").append(serviceInfo.exported).append("\n");
-                    if (serviceInfo.permission != null) {
-                        message.append("  Permission: ").append(serviceInfo.permission).append("\n");
-                    }
-                    message.append("\n");
+                    message.append("  Exported: ").append(serviceInfo.exported).append("\n\n");
                 }
             } else {
-                Log.i(TAG, "No services declared in this app.");
-                message.append("No services declared in this app.\n");
+                message.append("No services are declared in the manifest for this app.\n");
             }
         } catch (PackageManager.NameNotFoundException e) {
-            message.append("Could not find package info for ").append(packageName).append(": ").append(e.getMessage()).append("\n");
-            Log.e(TAG, "Could not find package info for " + packageName, e);
+            message.append("Could not get package info for services: ").append(e.getMessage());
         }
+
         return message.toString();
     }
 
-    public static String foregroundServiceTypeToString(int foregroundServiceType) {
-        if (foregroundServiceType == ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE) {
-            return "NONE";
+    private static String foregroundServiceTypeToString(int type) {
+        if (type == 0) return "Not specified"; 
+        StringBuilder sb = new StringBuilder();
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) != 0) sb.append("dataSync | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) != 0) sb.append("mediaPlayback | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL) != 0) sb.append("phoneCall | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION) != 0) sb.append("location | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) != 0) sb.append("connectedDevice | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) != 0) sb.append("mediaProjection | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA) != 0) sb.append("camera | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) != 0) sb.append("microphone | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH) != 0) sb.append("health | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING) != 0) sb.append("remoteMessaging | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED) != 0) sb.append("systemExempted | ");
+        if ((type & ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) != 0) sb.append("specialUse | ");
+        if (sb.length() > 0) {
+            return sb.substring(0, sb.length() - 3); 
+        } else {
+            return String.valueOf(type);
         }
-        if (foregroundServiceType == ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST) {
-            return "MANIFEST_DERIVED_OR_DEFAULT";
-        }
-
-        List<String> types = new ArrayList<>();
-
-        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) != 0) {
-            types.add("DATA_SYNC");
-        }
-        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) != 0) {
-            types.add("MEDIA_PLAYBACK");
-        }
-        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL) != 0) {
-            types.add("PHONE_CALL");
-        }
-        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION) != 0) {
-            types.add("LOCATION");
-        }
-        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) != 0) {
-            types.add("CONNECTED_DEVICE");
-        }
-        if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) != 0) {
-            types.add("MEDIA_PROJECTION");
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA) != 0) {
-                types.add("CAMERA");
-            }
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) != 0) {
-                types.add("MICROPHONE");
-            }
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { 
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE) != 0) {
-                types.add("SHORT_SERVICE");
-            }
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { 
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH) != 0) {
-                types.add("HEALTH");
-            }
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING) != 0) {
-                types.add("REMOTE_MESSAGING");
-            }
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED) != 0) {
-                types.add("SYSTEM_EXEMPTED");
-            }
-            if ((foregroundServiceType & ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) != 0) {
-                types.add("SPECIAL_USE");
-            }
-        }
-
-        if (types.isEmpty()) {
-            return "UNKNOWN_TYPE_OR_COMBINATION (" + foregroundServiceType + ")";
-        }
-
-        return String.join(" | ", types);
     }
 
     public static boolean isCurrentTimeBetween(int[] startTime, int[] endTime) {
@@ -417,72 +386,18 @@ public class Utils {
         }
     }
 
-    public static boolean isAppBatteryOptimized(Context context) {
-        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        if (powerManager != null) {
-            String packageName = context.getPackageName();
-            // isIgnoringBatteryOptimizations() returns true if the app is "Unrestricted"
-            // So, if it's false, the app IS being optimized (either "Optimized" or "Restricted")
-            boolean isIgnoringOptimizations = powerManager.isIgnoringBatteryOptimizations(packageName);
-            Log.d("BatteryOptimization", "Is app ignoring battery optimizations (Unrestricted)? " + isIgnoringOptimizations);
-            return !isIgnoringOptimizations; // True if optimized, false if unrestricted
-        }
-        // For versions before Marshmallow, this concept was handled differently
-        // or less explicitly. Assume not explicitly optimized in the same way.
-        // Or, you might consider it "optimized" by default if you can't check.
-        return false; // Or true, depending on how you want to interpret pre-M behavior
-    }
-
     /**
-     * Directs the user to the battery optimization settings screen for this app,
-     * or to the general battery optimization settings if the specific screen isn't available.
-     * This allows the user to change the setting if they wish.
+     * Checks if the app is battery optimized.
+     * @param context The application context.
+     * @return true if the app is battery optimized, false otherwise.
      */
-    public static void requestIgnoreBatteryOptimizations(Context context) {
-        Intent intent = new Intent();
-        String packageName = context.getPackageName();
-        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-
-        // First, check if already ignoring
-        if (pm != null && pm.isIgnoringBatteryOptimizations(packageName)) {
-            Log.d("BatteryOptimization", "App is already ignoring battery optimizations (Unrestricted).");
-            // Optionally show a message to the user
-            // Utils.showAlertDialog(context, "Battery Settings", "App is already set to Unrestricted.");
-            return;
-        }
-
-        // Android M and above: ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-        // This takes the user directly to the screen to exempt *your* app.
-        // Note: Some manufacturers might customize this screen or flow.
-        try {
-            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-            intent.setData(Uri.parse("package:" + packageName));
-            if (intent.resolveActivity(context.getPackageManager()) != null) {
-                context.startActivity(intent);
-                return;
+    public static boolean isAppBatteryOptimized(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                return !pm.isIgnoringBatteryOptimizations(context.getPackageName());
             }
-            Log.w("BatteryOptimization", "ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS not resolvable.");
-        } catch (Exception e) {
-            Log.e("BatteryOptimization", "Error trying ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", e);
         }
-
-        // Fallback: ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS (general settings)
-        // This usually takes the user to the list of all apps for battery optimization.
-        // It's less direct but a good fallback.
-        try {
-            Log.d("BatteryOptimization", "Falling back to ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS");
-            Intent fallbackIntent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-            if (fallbackIntent.resolveActivity(context.getPackageManager()) != null) {
-                context.startActivity(fallbackIntent);
-            } else {
-                Log.w("BatteryOptimization", "ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS not resolvable.");
-                // As a last resort, maybe open general app settings
-                // Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                // appSettingsIntent.setData(Uri.parse("package:" + packageName));
-                // context.startActivity(appSettingsIntent);
-            }
-        } catch (Exception e) {
-            Log.e("BatteryOptimization", "Error trying ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS fallback", e);
-        }
+        return false; // On versions before M, this concept doesn't exist in the same way.
     }
 }

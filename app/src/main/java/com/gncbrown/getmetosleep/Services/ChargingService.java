@@ -20,6 +20,7 @@ import com.gncbrown.getmetosleep.Utilities.FileLogger;
 import com.gncbrown.getmetosleep.Utilities.Utils;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -46,11 +47,11 @@ public class ChargingService extends Service {
                 Log.e(TAG, "onCreate: buildNotification() returned null!");
                 FileLogger.getInstance().e(TAG, "onCreate: buildNotification() returned null!");
                 stopSelf();
-                return; 
+                return;
             }
             startForeground(1, notification);
             Log.d(TAG, "onCreate: Successfully called startForeground.");
-            FileLogger.getInstance().i(TAG, "onCreate: Successfully called startForeground.");
+            FileLogger.getInstance().d(TAG, "onCreate: Successfully called startForeground.");
         } catch (Exception e) {
             Log.e(TAG, "onCreate: EXCEPTION during startForeground call!", e);
             FileLogger.getInstance().e(TAG, "onCreate: EXCEPTION during startForeground call!"
@@ -79,13 +80,13 @@ public class ChargingService extends Service {
                     } else {
                         message = "Skipping restoring volumes, not between quiet times. or alwaysRestoreVolumes is false.";
                         Log.d(TAG, message);
-                        FileLogger.getInstance().i(TAG, "Skipping restoring volumes, not between quiet times. or alwaysRestoreVolumes is false.");
+                        FileLogger.getInstance().w(TAG, "Skipping restoring volumes, not between quiet times. or alwaysRestoreVolumes is false.");
                     }
                     Utils.showNotification(ChargingService.this, "Not Charging", message);
                 } else if (!isBetween && !Utils.getDebugMode(context)) {
                     SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm", Locale.getDefault());
                     Date currentDate = new Date();
-                    message = "Current time: " + sdf.format(currentDate) + " is not between quiet times "
+                    message = "Time is not between quiet times "
                             + String.format(Locale.getDefault(), "%02d:%02d", startTimes[0], startTimes[1]) + " and "
                             + String.format(Locale.getDefault(), "%02d:%02d", endTimes[0], endTimes[1]) + ".";
                     FileLogger.getInstance().i(TAG, message);
@@ -126,13 +127,14 @@ public class ChargingService extends Service {
     // Removed createNotificationChannelIfNeeded() from here as it's called by Utils in onCreate
 
     private Notification buildNotification() {
-        // Utils.createNotificationChannel(this) is now solely responsible for channel creation in onCreate.
+        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss", Locale.getDefault());
+        Date currentDate = new Date();
+        String message = sdf.format(currentDate) + ": This service is now actively monitoring your device's power connection to manage audio settings. " +
+                "It runs in the foreground to ensure reliability.";
 
         Intent displayIntent = new Intent(this, DisplayTextActivity.class);
-        displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_TITLE, "Charging Service Status");
-        displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_CONTENT,
-                "This service is actively monitoring your device\'s power connection to manage audio settings. " +
-                "It runs in the foreground to ensure reliability.");
+        displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_TITLE, "Charging Service");
+        displayIntent.putExtra(DisplayTextActivity.EXTRA_TEXT_CONTENT, message);
 
         PendingIntent resultPendingIntent = TaskStackBuilder.create(this)
                 .addNextIntentWithParentStack(displayIntent)

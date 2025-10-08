@@ -1,5 +1,13 @@
+<!DOCTYPE resources [
+    <!ENTITY appname "GetMeToSleep">
+    <!ENTITY version "1.1.0">
+    ]>
+
 <resources>
-    <string name="app_name">GetMeToSleep</string>
+
+    <string name="app_name">&appname;</string>
+    <string name="versionName">&version;</string>
+    <string name="fullName">&appname; v&version;</string>
     <string name="loading_logs">Loading logs...</string>
     <string name="log_file_not_found">Log file not found or is empty.</string>
     <string name="error_reading_log_file">Error reading log file.</string>
